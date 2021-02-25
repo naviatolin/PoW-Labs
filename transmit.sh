@@ -1,0 +1,1 @@
+./UHD/examples/tx_samples_from_file  --freq 2478e6 --rate 2e6 --type float --ant "TX/RX" --subdev "A:A" --gain 40 --file Lab_1/tx2.dat 
