@@ -1,93 +1,76 @@
 clear all
 load('2User2AntennaBS.mat');
 %% Make vectors.
-x1 = real(x1);
-x2 = real(x2);
-y1 = real(y1);
-y2 = real(y2);
+[y1, y2] = take_real(y1, y2);
+
 %% Account for any delay.
-d1 = finddelay(x1, y1);
-d2 = finddelay(x2, y2);
+[d1, lags1, cor1] = find_delay(y1, x1);
+[d2, lags2, cor2] = find_delay(y2, x2);
+
+% delay the signals
 y1 = y1(d1:end);
 y2 = y2(d2:end);
+
+%% Plotting the correlation.
+% figure(1)
+% plot(lags1, cor1);
+% title("Cross Correlation At Different Lags for Tx1 Signal")
+% xlabel("Lags (Bits)")
+% ylabel("Cross Correlation")
+% 
+% figure(2)
+% plot(lags2, cor2);
+% title("Cross Correlation At Different Lags for Tx2 Signal")
+% xlabel("Lags (Bits)")
+% ylabel("Cross Correlation")
 
 %% Creating matrices.
 x = [x1'; x2'];
 y = [y1'; y2'];
 %% Estimate the channel response.
-% Note: We are asuming noise is negligible.
-
-% transmitter 1 transmits
-
-% Note: last bit was infinity which is why I had to subtract 1 : unsure why
-
-starting1 = 5001;
-x1_1 = x1(starting1 : pulseWidth * 128 + starting1 - 1);
-y1_1 = y1(starting1 : pulseWidth * 128 + starting1 - 1);
-y2_1 = y2(starting1 : pulseWidth * 128 + starting1 - 1);
-
-% transmitter 2 transmits
-starting2 = starting1 + (pulseWidth * 128) + 5000;
-x2_2 = x2(starting2 : pulseWidth * 128 + starting2 - 1);
-y1_2 = y1(starting2 : pulseWidth * 128 + starting2 - 1);
-y2_2 = y2(starting2 : pulseWidth * 128 + starting2 - 1);
-
-% calculating the channel response
-% when y1 is listening to x1 speak
-h11 = mean(y1_1 ./ x1_1);
-% when y2 is listening to x1 speak
-h21 = mean(y2_1 ./ x1_1);
-
-% when y1 is listening to x2 speak
-h12 = mean(y1_2 ./ x2_2);
-% when y2 is listening to x2 speak
-h22 = mean(y2_2 ./ x2_2);
-
-%% Creating the channel response matrix.
-H = [h11 h12; h21 h22];
+H = estimate_channel_response(x1, x2, y1, y2, pulseWidth);
 
 %% Calculate the weight vectors.
 % we know that H* x w = [1; 0] for x1
-w1 = inv(H') * [1; 0];
+w1 = H' \ [1; 0];
 
 % we know that H* x w = [0; 1] for x2
-w2 = inv(H') * [0; 1];
+w2 = H' \ [0; 1];
 
 %% Apply the weight vectors.
 x1_hat = w1' * y;
 x2_hat = w2' * y;
 
+%% Downsample the sent data.
+starting_down = ceil(pulseWidth/2) + 1;
+x1 = x1(starting_down:pulseWidth:end)';
+x2 = x2(starting_down:pulseWidth:end)';
+
+%% Take the windowed average of received data
+% sampled = x1_hat(1:40:end);
+% hold on
+% stem(sampled(100:200))
+% stem(x1_hat(4000:8000))
+% hold off
+% crop_received = 40*1781;
+% x1_hat = sign(round(x1_hat));
+% x1_hat_reshaped = reshape(x1_hat(1:crop_received), [], pulseWidth);
+% x1_hat_mean = mean(x1_hat_reshaped, 2) / pulseWidth;
+% x1_hat_final = sign(x1_hat_mean))';
+% x1_hat_final = sign(round(x1_hat_mean))';
+
+x2_hat = sign(round(x2_hat));
+x2_hat_reshaped = reshape(x2_hat(1:crop_received), [], pulseWidth);
+x2_hat_mean = mean(x2_hat_reshaped, 2) / pulseWidth;
+x2_hat_final = sign(round(x2_hat_mean))';
+
+
+% x2_hat = sign(round(x2_hat));
+% x2_hat = x2_hat(starting_down:pulseWidth:end);
+% 
 %% Calculate the error.
-% look at the last 1024 data bits to calculate the error
-intermediate_data_length = 128 * pulseWidth;
-starting3 = 5000 + intermediate_data_length + 5000 + intermediate_data_length + 5000 + 1;
+stem(x1(100:200))
+% stem(x1_hat_final(100:200))
 
-% crop off the end of the data
-x_check = x(:, starting3 : end);
-y_check = round(y(:, starting3 : end));
-
-% round y_check
-for i = 1:length(y_check)
-    if (y_check(1, i) > 1)
-        y_check(1, i) = 1;
-    elseif (y_check(1, i) < -1)
-        y_check(1, i) = -1;   
-    end
-    
-    if (y_check(2, i) > 1)
-        y_check(2, i) = 1;
-    elseif (y_check(2, i) < -1)
-        y_check(2, i) = -1;
-    end
-end
-
-% sample in the middle of the pulse width
-x_check = x_check(:, 20 : pulseWidth : end);
-y_check = y_check(:, 20 : pulseWidth : end);
-
-plot
-
-equality1 = (y_check(1,:) ~= x_check(1,:));
-equality2 = (y_check(2,:) ~= x_check(2,:));
-error_rate1 = sum(equality1)/length(x_check);
-error_rate2 = sum(equality2)/length(x_check);
+% error_tx1 = calculate_error(x1_hat_final, x1);
+% error_tx2 = calculate_error(x2_hat_final, x2);

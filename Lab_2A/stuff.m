@@ -8,4 +8,5 @@ y3 = polyval(p, 45.2);
 y4 = polyval(p, 48);
 y5 = polyval(p, 52.6);
 y6 = polyval(p, 55.8);
-y1+y2+y3+y4+y5+y6
+y1 * 617.96 + 36.04
+y6 * 617.96 + 36.04
