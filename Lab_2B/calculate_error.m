@@ -1,3 +1,5 @@
 function error = calculate_error(data_hat, data)
-    error = sum(abs(reshape(data' - data_hat, 1, [])))/(length(data));
+%     error_num = sum(abs(reshape(data' - data_hat, 1, [])))
+    error_num = sum(abs(data - data_hat));
+    error = error_num/(length(data));
 end

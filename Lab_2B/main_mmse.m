@@ -34,12 +34,6 @@ h4 = estimate_channel_response(samples', y4);
 
 H = [h1 h2 h3 h4];
 
-%% 
-
-lambda = var(y_empty(1,:));
-ident = lambda*eye(4,4);
-w = H' * inv( ( H * H' +  ident ));
-
 %%
 x_data1 = repelem(string_to_binvec(data1), pulse_width)';
 x_data2 = repelem(string_to_binvec(data2), pulse_width)';
@@ -55,22 +49,29 @@ data_full = [
 
 y = real(MIMOChannel4x4(data_full));
 
-%%
-x_hat = sign(round(w * y));
+%% 
+
+lambda = var(y_empty(1,:));
+ident = lambda*eye(4,4);
+w = H' * inv( ( H * H' +  ident ));
 
 %%
-x1 = x_data1(20:pulse_width:end);
-x2 = x_data1(20:pulse_width:end);
-x3 = x_data1(20:pulse_width:end);
-x4 = x_data1(20:pulse_width:end);
-
-x_hat1 = x_hat(1, 20:pulse_width:end);
-x_hat2 = x_hat(2, 20:pulse_width:end);
-x_hat3 = x_hat(3, 20:pulse_width:end);
-x_hat4 = x_hat(4, 20:pulse_width:end);
+x_hat_raw = w * y
+x_hat = sign(round(x_hat));
 
 %%
-error1 = calculate_error(x_hat1, x1);
-error2 = calculate_error(x_hat2, x2);
-error3 = calculate_error(x_hat3, x3);
-error4 = calculate_error(x_hat4, x4);
+% x1 = x_data1(pulse_width/2:pulse_width:end);
+% x2 = x_data1(20:pulse_width:end);
+% x3 = x_data1(20:pulse_width:end);
+% x4 = x_data1(20:pulse_width:end);
+
+% x_hat1 = x_hat(1, pulsewidth/2:pulse_width:end);
+% x_hat2 = x_hat(2, 20:pulse_width:end);
+% x_hat3 = x_hat(3, 20:pulse_width:end);
+% x_hat4 = x_hat(4, 20:pulse_width:end);
+
+%%
+error1 = calculate_error(x_hat(1,:), x_data1);
+% error2 = calculate_error(x_hat2, x2);
+% error3 = calculate_error(x_hat3, x3);
+% error4 = calculate_error(x_hat4, x4);
