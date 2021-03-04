@@ -70,7 +70,3 @@ x_hat3 = x_hat(3, 20:pulse_width:end);
 x_hat4 = x_hat(4, 20:pulse_width:end);
 
 %%
-error1 = calculate_error(x_hat1, x1);
-error2 = calculate_error(x_hat2, x2);
-error3 = calculate_error(x_hat3, x3);
-error4 = calculate_error(x_hat4, x4);
