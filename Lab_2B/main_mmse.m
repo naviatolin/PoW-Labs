@@ -57,21 +57,23 @@ w = H' * inv( ( H * H' +  ident ));
 
 %%
 x_hat_raw = w * y
-x_hat = sign(round(x_hat));
+x_hat = sign(round(x_hat_raw));
 
-%%
-% x1 = x_data1(pulse_width/2:pulse_width:end);
-% x2 = x_data1(20:pulse_width:end);
-% x3 = x_data1(20:pulse_width:end);
-% x4 = x_data1(20:pulse_width:end);
-
-% x_hat1 = x_hat(1, pulsewidth/2:pulse_width:end);
-% x_hat2 = x_hat(2, 20:pulse_width:end);
-% x_hat3 = x_hat(3, 20:pulse_width:end);
-% x_hat4 = x_hat(4, 20:pulse_width:end);
-
+figure
+hold on
+stem(x_hat(1,1:50))
+stem(x_data1(1:50))
+legend('received', 'sent')
+hold off
 %%
 error1 = calculate_error(x_hat(1,:), x_data1);
-% error2 = calculate_error(x_hat2, x2);
-% error3 = calculate_error(x_hat3, x3);
-% error4 = calculate_error(x_hat4, x4);
+error2 = calculate_error(x_hat(2,:), x_data2);
+error3 = calculate_error(x_hat(3,:), x_data3);
+error4 = calculate_error(x_hat(4,:), x_data4);
+
+%%
+msg1 = binvec_to_string((x_hat(1,:) + 1) ./ 2);
+msg2 = binvec_to_string((x_hat(2,:)+ 1) ./ 2);
+msg3 = binvec_to_string((x_hat(3,:)+ 1) ./ 2);
+msg4 = binvec_to_string((x_hat(4,:)+ 1) ./ 2);
+msg = strcat(msg1', msg2', msg3', msg4')

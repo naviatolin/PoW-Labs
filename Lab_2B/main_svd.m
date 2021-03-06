@@ -35,6 +35,8 @@ h4 = estimate_channel_response(samples', y4);
 H = [h1 h2 h3 h4];
 
 %%
+[U, S, V] = svd(H);
+
 x_data1 = repelem(string_to_binvec(data1), pulse_width)';
 x_data2 = repelem(string_to_binvec(data2), pulse_width)';
 x_data3 = repelem(string_to_binvec(data3), pulse_width)';
@@ -46,19 +48,15 @@ data_full = [
     x_data4
 ]';
 
+data_full = V * data_full';
 
 y = real(MIMOChannel4x4(data_full));
 
 %% SVD Implementation
-[U, S, V] = svd(H);
 
-w_tilde = U * y_empty;
-x_tilde = V * y;
+y_pre_t = U' * y;
 
-y_t = S x_t + w_t
-U * Y = S * V * x + U * W
-
-x_hat = sign((S * x_tilde + w_tilde));
+x_hat = sign(y_pre_t);
 
 figure
 hold on
@@ -67,4 +65,9 @@ stem(x_data1(1:50))
 legend('received', 'sent')
 hold off
 
-error1 = calculate_error(x_hat(1,:), x_data1);
+%%
+msg1 = binvec_to_string((x_hat(1,:) + 1) ./ 2);
+msg2 = binvec_to_string((x_hat(2,:)+ 1) ./ 2);
+msg3 = binvec_to_string((x_hat(3,:)+ 1) ./ 2);
+msg4 = binvec_to_string((x_hat(4,:)+ 1) ./ 2);
+msg = strcat(msg1', msg2', msg3', msg4')
