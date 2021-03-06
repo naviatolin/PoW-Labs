@@ -54,8 +54,8 @@ y = real(MIMOChannel4x4(precoded_data));
 
 %% SVD Implementation
 
-y_precoded_transpose = U' * y;
-x_hat = sign(y_precoded_transpose);
+y_deocoded_transpose = U' * y;
+x_hat = sign(y_deocoded_transpose);
 
 figure
 hold on
@@ -70,3 +70,4 @@ msg2 = binvec_to_string((x_hat(2,:)+ 1) ./ 2);
 msg3 = binvec_to_string((x_hat(3,:)+ 1) ./ 2);
 msg4 = binvec_to_string((x_hat(4,:)+ 1) ./ 2);
 msg = strcat(msg1', msg2', msg3', msg4')
+snr(x_data1, y(1,:))
