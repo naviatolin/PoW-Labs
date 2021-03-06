@@ -48,15 +48,14 @@ data_full = [
     x_data4
 ]';
 
-data_full = V * data_full';
+precoded_data = V * data_full';
 
-y = real(MIMOChannel4x4(data_full));
+y = real(MIMOChannel4x4(precoded_data));
 
 %% SVD Implementation
 
-y_pre_t = U' * y;
-
-x_hat = sign(y_pre_t);
+y_precoded_transpose = U' * y;
+x_hat = sign(y_precoded_transpose);
 
 figure
 hold on
