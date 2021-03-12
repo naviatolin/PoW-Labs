@@ -52,16 +52,111 @@ precoded_data = V * data_full';
 
 y = real(MIMOChannel4x4(precoded_data));
 
+figure
+t = tiledlayout(2,2);
+nexttile
+hold on
+yyaxis left
+stairs(y(1,1:50), 'LineWidth', 1)
+ylabel('Signal Rx 1')
+ylim([-0.0000005 0.0000005])
+yyaxis right
+stairs(x_data1(1:50), 'LineWidth', 0.8)
+xlim([0 50])
+ylim([-1.35 1.35])
+xlabel('Samples')
+ylabel('Signal Tx 1')
+hold off
+
+nexttile
+hold on
+yyaxis left
+stairs(y(2,1:50), 'LineWidth', 1)
+ylabel('Signal Rx 2')
+ylim([-0.0000005 0.0000005])
+yyaxis right
+stairs(x_data2(1:50), 'LineWidth', 0.8)
+xlim([0 50])
+ylim([-1.35 1.35])
+xlabel('Samples')
+ylabel('Signal Tx 2')
+hold off
+
+nexttile
+hold on
+yyaxis left
+stairs(y(3,1:50), 'LineWidth', 1)
+ylabel('Signal Rx 3')
+ylim([-0.0000005 0.0000005])
+yyaxis right
+stairs(x_data3(1:50), 'LineWidth', 0.8)
+xlim([0 50])
+ylim([-1.35 1.35])
+xlabel('Samples')
+ylabel('Signal Tx 3')
+hold off
+
+nexttile
+hold on
+yyaxis left
+stairs(y(4,1:50), 'LineWidth', 1)
+ylabel('Signal Rx 4')
+ylim([-0.0000005 0.0000005])
+xlim([0 50])
+yyaxis right
+stairs(x_data4(1:50), 'LineWidth', 0.8)
+ylim([-1.35 1.35])
+xlabel('Samples')
+ylabel('Signal Tx 4')
+legend('Received', 'Transmitted', 'Location', 'eastoutside')
+hold off
+
 %% SVD Implementation
 
 y_precoded_transpose = U' * y;
 x_hat = sign(y_precoded_transpose);
 
 figure
+t = tiledlayout(2,2);
+nexttile
 hold on
-stem(x_hat(1,1:50))
-stem(x_data1(1:50))
-legend('received', 'sent')
+stairs(x_hat(1,1:50), 'LineWidth', 1)
+stairs(x_data1(1:50), 'LineWidth', 1)
+xlim([0 50])
+ylim([-1.35 1.35])
+xlabel('Samples')
+ylabel('Signal Tx/Rx 1')
+hold off
+
+nexttile
+hold on
+stairs(x_hat(2,1:50), 'LineWidth', 1)
+stairs(x_data2(1:50), 'LineWidth', 1)
+xlim([0 50])
+ylim([-1.35 1.35])
+xlabel('Samples')
+ylabel('Signal Tx/Rx 2')
+hold off
+
+nexttile
+hold on
+stairs(x_hat(3,1:50), 'LineWidth', 1)
+stairs(x_data3(1:50), 'LineWidth', 1)
+xlim([0 50])
+ylim([-1.35 1.35])
+xlabel('Samples')
+ylabel('Signal Tx/Rx 3')
+hold off
+
+nexttile
+hold on
+stairs(x_hat(4,1:50), 'LineWidth', 1)
+stairs(x_data4(1:50), 'LineWidth', 1)
+xlim([0 50])
+ylim([-1.35 1.35])
+legend('Received', 'Transmitted', 'Location', 'eastoutside')
+xlabel('Samples')
+ylabel('Signal Tx/Rx 4')
 hold off
 
 %%
