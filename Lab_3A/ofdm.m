@@ -4,70 +4,83 @@ clear all;
 %% Estimate the channel
 block_len = 64;
 prefix_len = 16;
-block_num = 100;
+block_num = 2;
 
 % generate channels in the frequency domain
-training = gen_data(block_num, block_len);
+tx_train = gen_data(block_num, block_len);
 
-% convert to the time domain
-time_training = freq_to_time(training);
-
-% add the cyclic prefix to the signal
-prefix_training = prefix_long(time_training, block_len, prefix_len, block_num);
+% take the ifft and add the cyclic prefix to the signal
+prefixed_train = prefix_long(tx_train, block_len, prefix_len, block_num);
 
 % pass the signal through the channel
-received_training = nonflat_channel(prefix_training);
+rx_train = nonflat_channel(prefixed_train);
 
 % find the delay
-delay = find_delay(received_training, prefix_training);
+delay = find_delay(rx_train, prefixed_train);
 
 % apply the delay
-delayed_training = received_training(delay:end);
+rx_delay = rx_train(delay:end);
 
 % crop the signal by the prefix length
-cropped_training = crop_long(delayed_training, block_len, prefix_len, block_num);
-
-% convert back to the frequency domain
-rx_training = time_to_freq(cropped_training);
+rx_hat = crop_long(rx_delay, block_len, prefix_len, block_num);
 
 % estimate channel
-h_multiple_run = rx_training./training;
-H = mean(reshape(h_multiple_run, [block_num, block_len]));
+h_multiple_run = rx_hat./tx_train;
+h_stacked = reshape(h_multiple_run, [block_num, block_len]);
+H = mean(h_stacked);
 
-%% Clear all
-clear block_len block_num cropped_training delay delayed_training prefix_len prefix_training received_training rx_training time_training training h_multiple_run;
+%% Clear all but channel estimate
+clearvars -except H
 
 %% OFDM Process
 block_len = 64;
 prefix_len = 16;
-block_num = 100;
+block_num = 1000;
 
 % generate channels in the frequency domain
-data = gen_data(block_num, block_len);
-
-% convert to the time domain
-time_data = freq_to_time(data);
+tx = gen_data(block_num, block_len);
 
 % add the cyclic prefix to the signal
-prefix_data = prefix_long(time_data, block_len, prefix_len, block_num);
+prefixed_tx = prefix_long(tx, block_len, prefix_len, block_num);
 
 % pass the signal through the channel
-received_data = nonflat_channel(prefix_data);
+rx = nonflat_channel(prefixed_tx);
 
 % find the delay
-delay = find_delay(received_data, prefix_data);
+delay = find_delay(rx, prefixed_tx);
 
 % apply the delay
-delayed_data= received_data(delay:end);
+rx_delay = rx(delay:end);
 
 % crop the signal by the prefix length
-cropped_data = crop_long(delayed_data, block_len, prefix_len, block_num);
-
-% convert back to the frequency domain
-rx_data = time_to_freq(cropped_data);
+rx_data = crop_long(rx_delay, block_len, prefix_len, block_num);
 
 % solve for x_hat
-X_hat = estimate_signal(H, rx_data, block_num);
+X = estimate_signal(H, rx_data, block_num);
 
-%% Compute the error.
-error = compute_error(X_hat, data);
+X_hat = sign(real(X));
+
+
+% Compute the error.
+error = compute_error(X_hat, tx)
+
+%%
+figure
+hold on
+stem(tx(1:64), 'LineWidth', 1, 'Color', 'red')
+stem(rx_data(1:64), 'LineWidth', 1, 'Color', 'blue')
+ylim([-1.35 1.35])
+xlabel('Frequency Channels')
+ylabel('Data')
+legend('Transmitted Data', 'Received Data');
+hold off
+
+figure
+hold on
+stairs(X_hat(1:64), 'LineWidth', 1,'Color', 'blue')
+stairs(tx(1:64), 'LineWidth', 1,'Color', 'red')
+ylim([-1.35 1.35])
+xlabel('Frequency Channels')
+ylabel('Data')
+legend('Received Estimate', 'Transmitted Data');
+hold off
