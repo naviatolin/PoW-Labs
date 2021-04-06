@@ -67,8 +67,8 @@ rx_unprocessed = nonflat_channel_timing_error(tx_preambled.').';
     originally sent because the receiver doesn't stop immediately after the
     signal stops.
 %}
-delay = find_delay(rx_unprocessed, tx_preambled) + length(finder_sequence); % should be 69
-rx_delay = rx_unprocessed(69:end);
+delay = find_delay(rx_unprocessed, finder_sequence) + length(finder_sequence); % should be 69
+rx_delay = rx_unprocessed(delay:end);
 
 %% Adjusting for the fdelta.
 %{

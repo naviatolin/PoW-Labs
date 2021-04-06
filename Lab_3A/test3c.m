@@ -96,7 +96,7 @@ tx_prefixed = prefix_long(tx_pilot_toned, block_len, prefix_len, block_num);
 tx_preambled = [preamble tx_prefixed];
 
 %% Passing the signal through the channel.
-rx_unprocessed = nonflat_channel(tx_preambled);
+rx_unprocessed = nonflat_channel_timing_errors(tx_preambled);
 
 %% Accounting for the delay.
 %{
@@ -105,7 +105,7 @@ rx_unprocessed = nonflat_channel(tx_preambled);
     originally sent because the receiver doesn't stop immediately after the
     signal stops.
 %}
-delay = find_delay(rx_unprocessed, tx_preambled) + length(finder_sequence); % should be 69
+delay = find_delay(rx_unprocessed, finder_sequence) + length(finder_sequence); % should be 69
 rx_delay = rx_unprocessed(delay:end);
 
 %% Adjusting for the fdelta.

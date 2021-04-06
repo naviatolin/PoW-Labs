@@ -17,7 +17,7 @@ fclose(rx_f);
     originally sent because the receiver doesn't stop immediately after the
     signal stops.
 %}
-delay = find_delay(rx_unprocessed, tx_preambled) + length(finder_sequence); % should be 69
+delay = find_delay(rx_unprocessed, finder_sequence) + length(finder_sequence); % should be 69
 rx_delay = rx_unprocessed(delay:end);
 
 %% Adjusting for the fdelta.
