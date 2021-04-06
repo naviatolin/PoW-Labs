@@ -10,6 +10,7 @@ prefix_len = 16; % length of the cyclic prefix
 block_channel = 16; % number of blocks used to estimate channel
 block_signal = 84; % number of blocks of actual data to calculate error
 block_num = block_channel + block_signal; % 16 + 84 = 100
+data_len = 48;
 
 %% Generating the prefix
 %{
@@ -34,17 +35,54 @@ finder_sequence = [delay_find delay_find delay_find delay_find delay_find delay_
 preamble = [finder_sequence preamble];
 %% Generating data to send.
 %{
-    This generates all data that will have the cyclic prefix added to it. 
+    This generates all data. 
     This includes the data used to estimate the channel and the actual data
     that will be sent.
 %}
-tx = gen_data(block_num, block_len);
+tx = gen_data(block_num, data_len);
+
+%% Adding pilot tones and guard bands to the data.
+%{
+    This creates pilot tones and adds guard bands to the data assuming that
+    the 0 frequency component is in the middle. This data will be
+    fftshifted before it is continued to be processed for sending.
+%}
+left_guard = [0, 0, 0, 0, 0, 0];
+right_guard = [0, 0, 0, 0, 0];
+
+tx_pilot_toned = [];
+for i = 1 : data_len : ((block_num * data_len) - (data_len - 1))
+    ending = i + (data_len - 1);
+    portion = tx(i:ending); % should be 1x48
+    
+    % Defining the pilot_tone.
+    pilot_tone = 1;
+    
+    % Portioning spaces between the pilot tones
+    sec_1 = portion(1);
+    sec_2 = portion(2:20);
+    sec_3 = portion(21:24);
+    sec_4 = portion(25);
+    sec_5 = portion(26:44);
+    sec_6 = portion(45:48);
+    
+    % Adding in pilot tones and guard bands.
+    tx_piloted = [left_guard sec_1 pilot_tone sec_2 pilot_tone sec_3 0 sec_4 pilot_tone sec_5 pilot_tone sec_6 right_guard]; % should be 1x64
+    tx_fftshift = fftshift(tx_piloted); % should be 1x64, indices 28 - 38 should be 0
+    tx_pilot_toned = [tx_pilot_toned tx_fftshift]; % should be 1x6400
+end
+clear sec_1 sec_2 sec_3 sec_4 sec_5 sec_6
 
 %% Splitting the blocks into channel estimation and signal portions.
 end_channel = block_channel*block_len; % index seperating the channel estimation blocks from the data blocks
 
-tx_channel_blocks = tx(1:end_channel); % 16 * 64 = 1024
-tx_signal_blocks = tx(end_channel + 1:end); % 84 * 64 = 5376
+tx_channel_blocks = tx_pilot_toned(1:end_channel); % 16 * 64 = 1024
+tx_signal_blocks = tx_pilot_toned(end_channel + 1:end); % 84 * 64 = 5376
+
+
+end_gen_channel = block_channel*data_len;
+tx_gen_channel_blocks = tx(1:end_gen_channel); % 16 * 48 = 768
+tx_gen_signal_blocks = tx(end_gen_channel + 1:end); % 84 * 48 = 4032
 
 %% Adding the cyclic prefix to the signal and converting to the time domain.
 %{
@@ -52,13 +90,13 @@ tx_signal_blocks = tx(end_channel + 1:end); % 84 * 64 = 5376
     The cyclic prefix length is 16. So, the final block length will be
     80. Since 100 blocks are being sent, the final length will be 8000.
 %}
-tx_prefixed = prefix_long(tx, block_len, prefix_len, block_num);
+tx_prefixed = prefix_long(tx_pilot_toned, block_len, prefix_len, block_num);
 
 %% Appending the preamble to the prefixed data.
 tx_preambled = [preamble tx_prefixed];
 
 %% Passing the signal through the channel.
-rx_unprocessed = nonflat_channel_timing_error(tx_preambled.').';
+rx_unprocessed = nonflat_channel(tx_preambled);
 
 %% Accounting for the delay.
 %{
@@ -68,7 +106,7 @@ rx_unprocessed = nonflat_channel_timing_error(tx_preambled.').';
     signal stops.
 %}
 delay = find_delay(rx_unprocessed, tx_preambled) + length(finder_sequence); % should be 69
-rx_delay = rx_unprocessed(69:end);
+rx_delay = rx_unprocessed(delay:end);
 
 %% Adjusting for the fdelta.
 %{
@@ -95,7 +133,7 @@ second_lts = rx_preamble_only(second_lts_start : second_lts_end); % 1x64
 % Calculating F_delta.
 f_sum = 0;
 divided = second_lts ./ first_lts; % 1x64
-f_angle = angle(divided); % 1x64
+f_angle = angle(divided) % 1x64
 f_sum = sum(f_angle);
 f_delta = f_sum / block_len / block_len;
 
@@ -112,7 +150,7 @@ end
     multiplied by 64. The final length will be 6400 as there are 100
     blocks.
 %}
-rx_cropped = crop_long(rx_freq_adjusted, block_len, prefix_len, block_num); 
+rx_cropped = crop_long(rx_without_preamble, block_len, prefix_len, block_num); 
 
 %% Splitting the received signal into the channel estimation and signal portions.
 rx_channel_blocks = rx_cropped(1:end_channel);
@@ -121,20 +159,55 @@ rx_signal_blocks = rx_cropped(end_channel+1:end);
 %% Estimating the channel.
 multiple_channel_estimations = rx_channel_blocks./tx_channel_blocks;
 h_stacked = reshape(multiple_channel_estimations, [block_len, block_channel]).';
-
 H = mean(h_stacked);
 
 %% Estimating the data sent. 
-estimated_signal = estimate_signal(H, rx_signal_blocks, block_signal);
+estimated_signal = estimate_signal(H, rx_signal_blocks, block_signal); % should be 1x5376
+
+%% Correcting for phase offset using the pilot tones.
+rx_phase_corrected = [];
+for i = 1 : block_len : ((block_signal * block_len) - (block_len - 1))
+    ending = i + (block_len - 1);
+    portion = estimated_signal(i:ending); % should be 1x64
+    fft_shifted = fftshift(portion);
+    
+    % Pulling out the pilot tones and piecing together data components.
+    portion_no_guard = fft_shifted(7:end-5); % should be 1x53
+    sec_1 = portion_no_guard(1); % should be 1x1
+    pilot_1 = portion_no_guard(2);
+    sec_2 = portion_no_guard(3:21); % should be 1x19
+    pilot_2 = portion_no_guard(22);
+    sec_3 = portion_no_guard(23:26);% should be 1x4
+    sec_4 = portion_no_guard(28); % should be 1x1
+    pilot_3 = portion_no_guard(29);
+    sec_5 = portion_no_guard(30:48); % should be 1x19
+    pilot_4 = portion_no_guard(49);
+    sec_6 = portion_no_guard(50:end); % should be 1x4
+    
+    this_block = [sec_1 sec_2 sec_3 sec_4 sec_5 sec_6]; % should be 1x48
+
+    % Calculating the phase offset.
+    theta1 = angle(pilot_1/pilot_tone);
+    theta2 = angle(pilot_2/pilot_tone);
+    theta3 = angle(pilot_3/pilot_tone);
+    theta4 = angle(pilot_4/pilot_tone);
+    
+    theta = (theta1 + theta2 + theta3 + theta4)/4;
+    
+    % Adjusting with ThetaK.
+    y = this_block * exp(-1 * 1j * theta);
+    
+    rx_phase_corrected = [rx_phase_corrected y]; % should be 4032
+end
 
 %% Calculating the error.
 %{
     Unnecessary complex components are removed. The sign is taken to allow
     only -1 and 1 values. This is in order to estimate the error correctly.
 %}
-X_hat = sign(real(estimated_signal));
+X_hat = sign(real(rx_phase_corrected));
 
-error = compute_error(X_hat, tx_signal_blocks)
+error = compute_error(X_hat, tx_gen_signal_blocks)
 
 %% Figures created.
 % Estimated channel.
