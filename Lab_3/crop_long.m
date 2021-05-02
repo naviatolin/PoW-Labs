@@ -18,7 +18,7 @@ function data = crop_long(signal, block_len, prefix_len, block_number)
         ending = i+((block_len + prefix_len) - 1);
         portion = signal(i:ending);
         cropped = crop_signal(portion, prefix_len);
-        time = time_to_freq(cropped);
+        time = fftshift(time_to_freq(cropped));
         data = [data time];
     end
 end

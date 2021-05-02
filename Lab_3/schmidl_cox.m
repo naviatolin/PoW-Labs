@@ -100,11 +100,9 @@ f_sum = sum(f_angle);
 f_delta = f_sum / block_len / block_len;
 
 % Apply F_delta.
-rx_freq_adjusted = [];
-for i = 1:length(rx_without_preamble)
-    adjusted = rx_without_preamble(i) * exp(-1 * 1j * f_delta * i);
-    rx_freq_adjusted = [rx_freq_adjusted adjusted];
-end
+indices = [1:length(rx_without_preamble)];
+exponents = exp(-1 * 1j * f_delta * indices);
+rx_freq_adjusted = rx_without_preamble .* exponents;
 %% Removing the cyclic prefix and converting to the frequency domain.
 %{
     For each block, the prefix is removed and the DFT is taken.
